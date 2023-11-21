@@ -68,3 +68,18 @@ def get_pointer_and_label(x, label_dict, point_converter, tokenizer_bert):
     label = create_pointer_labels(points, label_dict)
     point_indexes = [t.point_index for t in points]
     return point_indexes, label
+
+
+def compute_class_weights(labels, num_classes=39):
+    import numpy as np
+    import torch
+    from sklearn.utils.class_weight import compute_class_weight
+    lab_collected = []
+    for lab in labels:
+        lab_collected.extend(lab)
+    unique_y = np.unique(lab_collected)
+    cls_weight = compute_class_weight(class_weight="balanced", classes=unique_y, y=lab_collected)
+    zeros = torch.zeros(num_classes)
+    for a,b in list(zip(unique_y, cls_weight)):
+        zeros[a] = b
+    return zeros
