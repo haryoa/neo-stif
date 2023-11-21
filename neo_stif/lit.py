@@ -61,7 +61,7 @@ class LitTaggerOrInsertion(LightningModule):
             if self.tokenizer is not None and self.label_dict is not None:
                 input_ids = input_to_model["input_ids"][0]
                 label = batch["tag_labels"][0]
-                input_ids_decoded = [self.tokenizer.vocab[x] for x in input_ids]
+                input_ids_decoded = [self.tokenizer.vocab[x.cpu().item()] for x in input_ids]
                 gold_label = [
                     self.label_dict[z] if z != -100 else "IGNORED"
                     for z in label.cpu().numpy()
