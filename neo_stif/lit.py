@@ -1,10 +1,9 @@
-
-
 from lightning import LightningModule
 from torch.optim import AdamW
 from neo_stif.components.models import PointerNetwork
 from torchmetrics import F1Score
 from torch.nn import CrossEntropyLoss
+
 
 class LitTaggerOrInsertion(LightningModule):
     """
@@ -13,7 +12,7 @@ class LitTaggerOrInsertion(LightningModule):
     Tagger will be trained as TokenTagging
     """
 
-    def __init__(self, model, lr, num_classes=35, class_weight=None) -> None:
+    def __init__(self, model, lr, num_classes=35, class_weight=None, tokenizer=None, label_dict=None) -> None:
         super().__init__()
         self.model = model
         self.lr = lr
@@ -21,8 +20,9 @@ class LitTaggerOrInsertion(LightningModule):
         self.ce_loss = CrossEntropyLoss(class_weight)
         self.num_labels=num_classes
         self.val_f1 = F1Score('multiclass', average='macro', num_classes=num_classes, ignore_index=-100)
+        self.tokenizer = tokenizer
+        self.label_dict = {j:i for i,j in label_dict.items()}
 
-        
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
 
@@ -31,7 +31,6 @@ class LitTaggerOrInsertion(LightningModule):
         tag_pred = self(**input_to_model)
         labels=batch['tag_labels']
         loss = self.ce_loss(tag_pred.logits.view(-1, self.num_labels), labels.view(-1))
-        # loss = tag_pred.loss
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
@@ -39,6 +38,17 @@ class LitTaggerOrInsertion(LightningModule):
         input_to_model = {k: v for k, v in batch.items() if k in ['input_ids', 'attention_mask', 'token_type_ids']}
         tag_pred = self(**input_to_model, labels=batch['tag_labels'])
         loss = tag_pred.loss
+        
+        if batch_idx == 0:
+            if self.tokenizer is not None and self.label_dict is not None:
+                input_ids = input_to_model['input_ids'][0]
+                label = batch['tag_labels'][0]
+                input_ids_decoded = [self.tokenizer.vocab[x] for x in input_ids]
+                gold_label = [self.label_dict[z] if z != -100 else 'IGNORED' for z in label.cpu().numpy() ]
+                print(f"Input before going to output: {list(zip(input_ids_decoded, gold_label))}")
+                pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
+                pred_label = [self.label_dict[z] for z in pred]
+                print(f"Input: {input_ids_decoded} \n Pred: {pred_label}")
 
         self.val_f1(tag_pred.logits.argmax(-1), batch['tag_labels'])
         self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
@@ -66,8 +76,6 @@ class LitPointer(LightningModule):
         super().__init__()
         self.model = PointerNetwork(config)
         self.lr = lr
-        # self.val_f1 = F1Score('multiclass', average='macro')
-
         
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -82,7 +90,6 @@ class LitPointer(LightningModule):
         input_to_model = {k: v for k, v in batch.items() if k in ['input_ids', 'attention_mask', 'token_type_ids']}
         tag_pred = self(**input_to_model, labels=batch['tag_labels'])
         loss = tag_pred.loss
-        # self.log("f1_val_step", self.val_f1, on_epoch=True, prog_bar=True)
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
