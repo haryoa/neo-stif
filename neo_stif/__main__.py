@@ -42,7 +42,7 @@ def train(part: str = 'tagger', model='koto', batch_size=32,
             dev_dl = DataLoader(data_dev, batch_size=batch_size, shuffle=True, collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)))
 
         pre_trained_bert = BertForTokenClassification.from_pretrained(model_path_or_name, num_labels=len(label_dict))
-        lit_tagger = LitTaggerOrInsertion(pre_trained_bert, lr=1e-3, num_classes=len(label_dict), class_weight=class_weights)
+        lit_tagger = LitTaggerOrInsertion(pre_trained_bert, lr=1e-3, num_classes=len(label_dict), class_weight=class_weights, tokenizer=tokenizer, label_dict=label_dict)
         train_dl = DataLoader(data_train, batch_size=batch_size, shuffle=True, collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)))
         trainer = Trainer(accelerator='mps', devices=1, val_check_interval=20, check_val_every_n_epoch=None, callbacks=[rich_cb])
         trainer.fit(lit_tagger, train_dl, dev_dl)
