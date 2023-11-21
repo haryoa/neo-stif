@@ -20,7 +20,7 @@ USE_POINTING = True
 model_dict = {"koto": "indolem/indobert-base-uncased"}
 
 
-LR_TAGGER = 2e-5 # due to the pre-trained nature
+LR_TAGGER = 5e-5 # due to the pre-trained nature
 LR_POINTER = 1e-3 # no pre-trained
 LR_INSERTION = 2e-5 # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
@@ -115,7 +115,7 @@ def tagger(
         monitor="val_loss",
         mode="min",
     )
-    ea_stop = EarlyStopping(patience=5, monitor="val_loss", mode="min")
+    ea_stop = EarlyStopping(patience=8, monitor="val_loss", mode="min")
     dev_dl = None
     class_weights = (
         compute_class_weights(df_train.label.apply(eval), num_classes=len(label_dict))
