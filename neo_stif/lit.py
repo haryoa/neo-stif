@@ -45,7 +45,7 @@ class LitTaggerOrInsertion(LightningModule):
                 label = batch['tag_labels'][0]
                 # get tokenizer inverse vocab
                 vocab_reverse = {v: k for k, v in self.tokenizer.vocab.items()}
-                input_ids_decoded = [vocab_reverse[x] for x in input_ids]
+                input_ids_decoded = [vocab_reverse[x.cpu().item()] for x in input_ids]
                 gold_label = [self.label_dict[z] if z != -100 else 'IGNORED' for z in label.cpu().numpy() ]
                 print(f"Input before going to output: {list(zip(input_ids_decoded, gold_label))}")
                 pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
