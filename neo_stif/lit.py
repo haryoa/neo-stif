@@ -50,7 +50,7 @@ class LitTaggerOrInsertion(LightningModule):
                 print(f"Input before going to output: {list(zip(input_ids_decoded, gold_label))}")
                 pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
                 pred_label = [self.label_dict[z] for z in pred]
-                print(f"Input: {input_ids_decoded} \n Pred: {pred_label}")
+                print(f"Input, pred: {list(zip(input_ids_decoded, pred_label))}")
 
         self.val_f1(tag_pred.logits.argmax(-1), batch['tag_labels'])
         self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
