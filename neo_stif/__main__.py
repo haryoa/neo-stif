@@ -191,7 +191,7 @@ def pointer(
         monitor="val_loss",
         mode="min",
     )
-    ea_stop = EarlyStopping(patience=5, monitor="val_loss", mode="min")
+    ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
     dev_dl = None
 
     if with_validation:
@@ -216,8 +216,8 @@ def pointer(
     trainer = Trainer(
         accelerator=device,
         devices=1,
-        val_check_interval=20,
-        check_val_every_n_epoch=None,
+        # val_check_interval=20,
+        # check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback, ea_stop],
     )
     trainer.fit(lit_pointer, train_dl, dev_dl)
