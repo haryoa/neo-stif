@@ -21,7 +21,7 @@ model_dict = {"koto": "indolem/indobert-base-uncased"}
 
 
 LR_TAGGER = 5e-5 # due to the pre-trained nature
-LR_POINTER = 1e-4 # no pre-trained
+LR_POINTER = 1e-5 # no pre-trained
 LR_INSERTION = 2e-5 # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
 
@@ -66,13 +66,13 @@ def insertion(
         train_data,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=FelixInsertionCollator(tokenizer, pad_label_as_input=len(label_dict)),
+        collate_fn=FelixInsertionCollator(tokenizer),
     )
     dev_dl = DataLoader(
         dev_data,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
+        collate_fn=FelixInsertionCollator(tokenizer),
     )
     model = BertForMaskedLM.from_pretrained(model_path_or_name)
     lit_insert = LitTaggerOrInsertion(
