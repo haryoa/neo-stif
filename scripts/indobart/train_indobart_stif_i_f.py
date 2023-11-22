@@ -53,7 +53,7 @@ def main():
 
     collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
-    early_stopping_cb = EarlyStoppingCallback(early_stopping_patience=5)
+    early_stopping_cb = EarlyStoppingCallback(early_stopping_patience=10)
 
     training_args = TrainingArguments(
         learning_rate=1e-5,
