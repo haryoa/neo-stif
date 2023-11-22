@@ -82,6 +82,7 @@ def insertion(
         class_weight=None,
         tokenizer=tokenizer,
         label_dict=label_dict,
+        is_insertion=True,
     )
     trainer = Trainer(
         accelerator=device,
