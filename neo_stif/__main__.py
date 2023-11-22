@@ -21,7 +21,7 @@ model_dict = {"koto": "indolem/indobert-base-uncased"}
 
 
 LR_TAGGER = 5e-5 # due to the pre-trained nature
-LR_POINTER = 1e-3 # no pre-trained
+LR_POINTER = 1e-4 # no pre-trained
 LR_INSERTION = 2e-5 # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
 
@@ -191,7 +191,7 @@ def pointer(
         monitor="val_loss",
         mode="min",
     )
-    ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
+    # ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
     dev_dl = None
 
     if with_validation:
