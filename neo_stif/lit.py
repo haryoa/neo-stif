@@ -20,6 +20,7 @@ class LitTaggerOrInsertion(LightningModule):
         class_weight=None,
         tokenizer=None,
         label_dict=None,
+        is_insertion=False,
     ) -> None:
         super().__init__()
         self.model = model
@@ -32,6 +33,8 @@ class LitTaggerOrInsertion(LightningModule):
         )
         self.tokenizer = tokenizer
         self.label_dict = {j: i for i, j in label_dict.items()}
+        self.is_insertion = is_insertion
+        self.label_var_name = 'labels' if insertion else 'tag_labels'
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -43,7 +46,7 @@ class LitTaggerOrInsertion(LightningModule):
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
         tag_pred = self(**input_to_model)
-        labels = batch["tag_labels"]
+        labels = batch[self.label_var_name]
         loss = self.ce_loss(tag_pred.logits.view(-1, self.num_labels), labels.view(-1))
         self.log("train_loss", loss, prog_bar=True)
         return loss
@@ -54,7 +57,7 @@ class LitTaggerOrInsertion(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        tag_pred = self(**input_to_model, labels=batch["tag_labels"])
+        tag_pred = self(**input_to_model, labels=batch[self.label_var_name])
         loss = tag_pred.loss
 
         if batch_idx == 0:
@@ -86,7 +89,7 @@ class LitTaggerOrInsertion(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        tag_pred = self(**input_to_model, labels=batch["tag_labels"])
+        tag_pred = self(**input_to_model, labels=batch[self.label_var_name])
         loss = tag_pred.loss
         self.log("test_loss", loss, prog_bar=True)
         return loss
