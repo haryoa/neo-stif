@@ -54,12 +54,13 @@ def insertion(
     rich_cb = RichProgressBar()
     checkpoint_callback = ModelCheckpoint(
         dirpath="output/stif-i-f/felix-insert/",
-        filename="{epoch}-{val_loss:.2f}-{f1_val_step:.2f}",
-        save_top_k=2,
+        filename="{epoch}-{val_loss:.2f}",
+        save_top_k=1,
+        save_last=True,
         monitor="val_loss",
         mode="min",
     )
-    ea_stop = EarlyStopping(patience=5, monitor="val_loss", mode="min")
+    # ea_stop = EarlyStopping(patience=5, monitor="val_loss", mode="min")
     train_data = load_from_disk(processed_train_data)
     dev_data = load_from_disk(processed_dev_data)
     train_dl = DataLoader(
@@ -87,13 +88,12 @@ def insertion(
     trainer = Trainer(
         accelerator=device,
         devices=1,
+        max_epochs=20,
         val_check_interval=20,
         check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback, ea_stop],
+        callbacks=[rich_cb, checkpoint_callback],
     )
     trainer.fit(lit_insert, train_dl, dev_dl)
-
-
 
 
 def tagger(
