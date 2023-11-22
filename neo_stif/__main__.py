@@ -78,7 +78,7 @@ def insertion(
     lit_insert = LitTaggerOrInsertion(
         model,
         lr=LR_INSERTION,
-        num_classes=len(label_dict),
+        num_classes=model.config.num_labels,
         class_weight=None,
         tokenizer=tokenizer,
         label_dict=label_dict,
