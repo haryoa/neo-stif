@@ -34,7 +34,7 @@ class LitTaggerOrInsertion(LightningModule):
         self.tokenizer = tokenizer
         self.label_dict = {j: i for i, j in label_dict.items()}
         self.is_insertion = is_insertion
-        self.label_var_name = 'labels' if insertion else 'tag_labels'
+        self.label_var_name = 'labels' if is_insertion else 'tag_labels'
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
