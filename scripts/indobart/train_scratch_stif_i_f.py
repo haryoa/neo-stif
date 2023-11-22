@@ -64,7 +64,7 @@ def main():
         metric_for_best_model="eval_loss",
         save_strategy="steps",
         num_train_epochs=50,
-        output_dir="outputs/stif-i-f/indobart-v2/",
+        output_dir="outputs/stif-i-f/scratch/",
         per_device_train_batch_size=8,
         save_total_limit=1,
         weight_decay=0.01,
