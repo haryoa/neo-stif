@@ -76,7 +76,7 @@ class LitTaggerOrInsertion(LightningModule):
                 )
                 pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
                 pred_label = [self.reverse_vocab[z] for z in pred]
-                print(f"Input: {input_ids_decoded} \n Pred: {pred_label}")
+                print(f"Input, pred: {list(zip(input_ids_decoded, pred_label))}")
 
         self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
         self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
