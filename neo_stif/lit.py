@@ -116,7 +116,7 @@ class LitTaggerOrInsertion(LightningModule):
             }
             input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
             input_to_pointer['labels'] = batch["point_labels"]
-            loss_pointer, last_att = self.forward_pointer(**input_to_pointer, previous_last_hidden=last_hidden)
+            loss_pointer, _ = self.forward_pointer(**input_to_pointer, previous_last_hidden=last_hidden)
             loss = loss + loss_pointer
         self.log("val_loss", loss, prog_bar=True)
         return loss
