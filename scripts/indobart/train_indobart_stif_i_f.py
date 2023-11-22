@@ -39,7 +39,7 @@ def main():
     df_val_data = datasets.Dataset.from_pandas(df_val_used)
 
     train_tokenized = df_train_data.map(
-        partial(tokenize_function, tokenizer=tokenizer)
+        partial(tokenize_function, tokenizer=tokenizer),
         batched=True,
         batch_size=32,
         remove_columns=["informal", "formal"],
