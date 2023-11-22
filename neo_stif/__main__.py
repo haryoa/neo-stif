@@ -218,7 +218,7 @@ def pointer(
         devices=1,
         # val_check_interval=20,
         # check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback, ea_stop],
+        callbacks=[rich_cb, checkpoint_callback],
     )
     trainer.fit(lit_pointer, train_dl, dev_dl)
 
