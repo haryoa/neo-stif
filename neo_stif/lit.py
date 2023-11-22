@@ -82,7 +82,9 @@ class LitTaggerOrInsertion(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        tag_pred = self(**input_to_model, output_hidden_states=True)
+        labels = batch[self.label_var_name]
+
+        tag_pred = self(**input_to_model, labels=labels, output_hidden_states=True)
         last_hidden = tag_pred.hidden_states[-1]
         loss = tag_pred.loss
 
