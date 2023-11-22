@@ -119,7 +119,7 @@ class LitPointer(LightningModule):
 
         
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss = tag_pred.loss
+        loss, last_att = tag_pred
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -131,7 +131,7 @@ class LitPointer(LightningModule):
         input_to_model['input_ids'] = batch.pop('tag_labels_input')
 
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss = tag_pred.loss
+        loss, last_att = tag_pred
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
@@ -144,7 +144,7 @@ class LitPointer(LightningModule):
         input_to_model['input_ids'] = batch.pop('tag_labels_input')
 
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss = tag_pred.loss
+        loss, last_att = tag_pred
         self.log("test_loss", loss, prog_bar=True)
         return loss
 
