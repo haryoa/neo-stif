@@ -115,7 +115,7 @@ def tagger(
         monitor="val_loss",
         mode="min",
     )
-    ea_stop = EarlyStopping(patience=8, monitor="val_loss", mode="min")
+    ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
     dev_dl = None
     class_weights = (
         compute_class_weights(df_train.label.apply(eval), num_classes=len(label_dict))
