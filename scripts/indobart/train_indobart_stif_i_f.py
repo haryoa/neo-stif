@@ -1,3 +1,4 @@
+from functools import partial
 from transformers import MBartForConditionalGeneration
 from indobenchmark import IndoNLGTokenizer
 import pandas as pd
@@ -38,13 +39,13 @@ def main():
     df_val_data = datasets.Dataset.from_pandas(df_val_used)
 
     train_tokenized = df_train_data.map(
-        tokenize_function,
+        partial(tokenize_function, tokenizer=tokenizer)
         batched=True,
         batch_size=32,
         remove_columns=["informal", "formal"],
     )
     val_tokenized = df_val_data.map(
-        tokenize_function,
+        partial(tokenize_function, tokenizer=tokenizer),
         batched=True,
         batch_size=32,
         remove_columns=["informal", "formal"],
