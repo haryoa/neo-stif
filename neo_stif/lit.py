@@ -28,9 +28,9 @@ class LitTaggerOrInsertion(LightningModule):
         self.class_weight = class_weight
         self.ce_loss = CrossEntropyLoss(class_weight)
         self.num_labels = num_classes
-        self.val_f1 = F1Score(
-            "multiclass", average="macro", num_classes=num_classes, ignore_index=-100
-        )
+        # self.val_f1 = F1Score(
+        #     "multiclass", average="macro", num_classes=num_classes, ignore_index=-100
+        # )
         self.tokenizer = tokenizer
         self.label_dict = {j: i for i, j in label_dict.items()}
         self.is_insertion = is_insertion
@@ -78,8 +78,8 @@ class LitTaggerOrInsertion(LightningModule):
                 pred_label = [reverse_vocab[z] for z in pred]
                 print(f"Input, pred: {list(zip(input_ids_decoded, pred_label))}")
 
-        self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
-        self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
+        # self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
+        # self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
