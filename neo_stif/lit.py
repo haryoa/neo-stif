@@ -59,7 +59,8 @@ class LitTaggerOrInsertion(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        tag_pred = self(**input_to_model)
+        tag_pred = self(**input_to_model, output_hidden_states=True)
+        last_hidden = tag_pred.hidden_states[-1]
         labels = batch[self.label_var_name]
         loss = self.ce_loss(tag_pred.logits.view(-1, self.num_labels), labels.view(-1))
         if self.use_pointer:
@@ -70,7 +71,7 @@ class LitTaggerOrInsertion(LightningModule):
             }
             input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
             input_to_pointer['labels'] = batch["point_labels"]
-            loss_pointer, last_att = self.forward_pointer(**input_to_pointer)
+            loss_pointer, last_att = self.forward_pointer(**input_to_pointer, previous_last_hidden=last_hidden)
             loss = loss + loss_pointer
         self.log("train_loss", loss, prog_bar=True)
         return loss
