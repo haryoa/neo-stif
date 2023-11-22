@@ -151,7 +151,7 @@ def taggerpoint(
 
     lit_tagger = LitTaggerOrInsertion(
         pre_trained_bert,
-        lr=LR_TAGGER,
+        lr=5e-5,
         num_classes=len(label_dict),
         class_weight=class_weights,
         tokenizer=tokenizer,
