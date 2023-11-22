@@ -89,8 +89,8 @@ def insertion(
         accelerator=device,
         devices=1,
         max_epochs=20,
-        val_check_interval=20,
-        check_val_every_n_epoch=None,
+        # val_check_interval=20,
+        # check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
     )
     trainer.fit(lit_insert, train_dl, dev_dl)
