@@ -75,7 +75,6 @@ def main():
         args = training_args,
         train_dataset = train_tokenized,
         eval_dataset = val_tokenized,
-        tokenizer = tokenizer,
         data_collator = collator,
         callbacks = [early_stopping_cb]
     )
