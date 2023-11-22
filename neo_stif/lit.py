@@ -63,7 +63,7 @@ class LitTaggerOrInsertion(LightningModule):
         if batch_idx == 0:
             if self.tokenizer is not None and self.label_dict is not None:
                 input_ids = input_to_model["input_ids"][0]
-                label = batch["tag_labels"][0]
+                label = batch[self.label_var_name][0]
                 ## reverse vocab
                 reverse_vocab = {j: i for i, j in self.tokenizer.vocab.items()}
                 input_ids_decoded = [reverse_vocab[x.cpu().item()] for x in input_ids]
@@ -78,7 +78,7 @@ class LitTaggerOrInsertion(LightningModule):
                 pred_label = [self.label_dict[z] for z in pred]
                 print(f"Input: {input_ids_decoded} \n Pred: {pred_label}")
 
-        self.val_f1(tag_pred.logits.argmax(-1), batch["tag_labels"])
+        self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
         self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
         self.log("val_loss", loss, prog_bar=True)
         return loss
