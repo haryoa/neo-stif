@@ -63,7 +63,6 @@ def main():
         metric_for_best_model="eval_loss",
         save_strategy="steps",
         num_train_epochs=50,
-        max_steps=1,
         output_dir="outputs/stif-i-f/indobart-v2/",
         per_device_train_batch_size=8,
         save_total_limit=1,
@@ -82,6 +81,7 @@ def main():
     )
     
     trainer.train()
+    trainer.push_to_hub()
 
 
 if __name__ == "__main__":
