@@ -21,6 +21,8 @@ class LitTaggerOrInsertion(LightningModule):
         tokenizer=None,
         label_dict=None,
         is_insertion=False,
+        use_pointer=False,
+        pointer_config=None,
     ) -> None:
         super().__init__()
         self.model = model
@@ -34,10 +36,22 @@ class LitTaggerOrInsertion(LightningModule):
         self.tokenizer = tokenizer
         self.label_dict = {j: i for i, j in label_dict.items()}
         self.is_insertion = is_insertion
-        self.label_var_name = 'labels' if is_insertion else 'tag_labels'
+        self.label_var_name = "labels" if is_insertion else "tag_labels"
+        self.use_pointer = use_pointer
+        self.pointer_model = (
+            None
+            if not use_pointer
+            else PointerNetwork(
+                pointer_config, previous_hidden_dim=model.config.hidden_size
+            )
+        )
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
+    
+    def forward_pointer(self, input_ids, attention_mask, token_type_ids, previous_last_hidden, labels=None):
+        return self.pointer_model(input_ids, attention_mask, token_type_ids, previous_last_hidden, labels=labels)
+
 
     def training_step(self, batch, batch_idx):
         input_to_model = {
@@ -48,6 +62,16 @@ class LitTaggerOrInsertion(LightningModule):
         tag_pred = self(**input_to_model)
         labels = batch[self.label_var_name]
         loss = self.ce_loss(tag_pred.logits.view(-1, self.num_labels), labels.view(-1))
+        if self.use_pointer:
+            input_to_pointer = {
+                k: v
+                for k, v in batch.items()
+                if k in ["input_ids", "attention_mask", "token_type_ids"]
+            }
+            input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
+            input_to_pointer['labels'] = batch["point_labels"]
+            loss_pointer, last_att = self.forward_pointer(**input_to_pointer)
+            loss = loss + loss_pointer
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
@@ -77,9 +101,19 @@ class LitTaggerOrInsertion(LightningModule):
                 pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
                 pred_label = [reverse_vocab[z] for z in pred]
                 print(f"Input, pred: {list(zip(input_ids_decoded, pred_label))}")
-
+            
         # self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
         # self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
+        if self.use_pointer:
+            input_to_pointer = {
+                k: v
+                for k, v in batch.items()
+                if k in ["input_ids", "attention_mask", "token_type_ids"]
+            }
+            input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
+            input_to_pointer['labels'] = batch["point_labels"]
+            loss_pointer, last_att = self.forward_pointer(**input_to_pointer)
+            loss = loss + loss_pointer
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
@@ -118,9 +152,8 @@ class LitPointer(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        input_to_model['input_ids'] = batch.pop('tag_labels_input')
+        input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
-        
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
         loss, last_att = tag_pred
         return loss
@@ -131,7 +164,7 @@ class LitPointer(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        input_to_model['input_ids'] = batch.pop('tag_labels_input')
+        input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
         loss, last_att = tag_pred
@@ -144,7 +177,7 @@ class LitPointer(LightningModule):
             for k, v in batch.items()
             if k in ["input_ids", "attention_mask", "token_type_ids"]
         }
-        input_to_model['input_ids'] = batch.pop('tag_labels_input')
+        input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
         tag_pred = self(**input_to_model, labels=batch["point_labels"])
         loss, last_att = tag_pred

@@ -26,6 +26,7 @@ def tokenize_function(examples, tokenizer, src="informal", tgt="formal"):
     return returned_dict
 
 
+
 def main():
     tokenizer = IndoNLGTokenizer.from_pretrained(MODEL_NAME)
     config = MBartConfig.from_pretrained(MODEL_NAME)
