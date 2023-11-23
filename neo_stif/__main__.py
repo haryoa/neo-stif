@@ -4,7 +4,7 @@ from neo_stif.components.utils import create_label_map
 import pandas as pd
 from neo_stif.components.train_data_preparation import prepare_data_tagging_and_pointer
 import datasets
-from neo_stif.lit import LitPointer, LitTaggerOrInsertion
+from neo_stif.lit import LitTaggerOrInsertion
 from torch.utils.data import DataLoader
 from neo_stif.components.collator import FelixCollator, FelixInsertionCollator
 from lightning import Trainer
