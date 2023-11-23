@@ -78,7 +78,7 @@ class BertSelfAttention(nn.Module):
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = self.dropout(attention_probs)
+        # attention_probs = self.dropout(attention_probs)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -147,14 +147,14 @@ class PointerNetwork(nn.Module):
         position_ids = self.position_ids[:, 0 : seq_length + 0]
 
         input_embeds = self.word_embeddings(input_ids)
-        embeddings = input_embeds
+        # embeddings = input_embeds
         if self.position_embedding_type == "absolute":
             position_embeddings = self.position_embeddings(position_ids)
-            embeddings += position_embeddings
+            # embeddings += position_embeddings
 
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings)
-        return input_embeds, embeddings
+        # embeddings = self.LayerNorm(embeddings)
+        # embeddings = self.dropout(embeddings)
+        return input_embeds, position_embeddings
 
     def forward(
         self,
@@ -164,11 +164,11 @@ class PointerNetwork(nn.Module):
         previous_bert_output,
         labels=None,
     ):
-        input_embeds, embeddings = self.embedding_layer(input_ids)
+        input_embeds, position_embeddings = self.embedding_layer(input_ids)
 
         # concate previous bert output with the input_embeds and embeddings
         pointer_input = torch.cat(
-            (previous_bert_output, input_embeds, embeddings), dim=-1
+            (previous_bert_output, input_embeds, position_embeddings), dim=-1
         )
         # go to linear layer + gelu
         pointer_input = self.linear_after_embed(pointer_input)
