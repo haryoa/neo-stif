@@ -8,8 +8,8 @@ from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 
 
 MODEL_NAME = "indobenchmark/indobart-v2"
-TRAIN_CSV = "data/scolid/train_with_pointing.csv"
-VAL_CSV = "data/scolid/dev_with_pointing.csv"
+TRAIN_CSV = "data/scolid/train.csv"
+VAL_CSV = "data/scolid/dev.csv"
 
 
 def tokenize_function(examples, tokenizer, src="informal", tgt="formal"):
@@ -24,7 +24,6 @@ def tokenize_function(examples, tokenizer, src="informal", tgt="formal"):
         "labels": tgt_tokenized,
     }
     return returned_dict
-
 
 
 def main():
