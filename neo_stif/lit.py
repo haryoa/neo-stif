@@ -138,10 +138,10 @@ class LitTaggerOrInsertion(LightningModule):
             )
             loss = loss + loss_pointer
 
-            if batch_idx == 0:
-                print(
-                    f"Pair of input_ids + labels + point_labels: {input_to_pointer[0], i, input_to_pointer[2]}"
-                )
+            # if batch_idx == 0:
+            #     print(
+            #         f"Pair of input_ids + labels + point_labels: {input_to_pointer["input_i"], i, input_to_pointer[2]}"
+            #     )
 
             self.log("pointer_loss", loss_pointer, prog_bar=True)
         self.log("val_loss", loss, prog_bar=True)
