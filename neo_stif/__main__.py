@@ -170,7 +170,7 @@ def taggerpoint(
         accelerator=device,
         devices=1,
         val_check_interval=20,
-        max_epochs=100,
+        max_epochs=200,
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
     )
