@@ -145,14 +145,14 @@ def taggerpoint(
     pointer_network_config = BertConfig(
         vocab_size=len(label_dict) + 1,
         num_hidden_layers=2,
-        hidden_size=768,
+        hidden_size=100,
         num_attention_heads=1,
         pad_token_id=len(label_dict),
     )  # + 1 as the pad token
 
     lit_tagger = LitTaggerOrInsertion(
         pre_trained_bert,
-        lr=2e-5,
+        lr=5e-5,
         num_classes=len(label_dict),
         class_weight=class_weights,
         tokenizer=tokenizer,
@@ -169,7 +169,7 @@ def taggerpoint(
     trainer = Trainer(
         accelerator=device,
         devices=1,
-        val_check_interval=20,
+        val_check_interval=30,
         max_epochs=200,
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
