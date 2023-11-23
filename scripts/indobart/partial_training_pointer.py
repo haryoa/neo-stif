@@ -92,7 +92,7 @@ def train_stif(
     lit_tagger = LitTaggerOrInsertion.load_from_checkpoint(
         model_ckpt,
         model=pre_trained_bert,
-        lr=1e-3,
+        lr=5e-4,
         num_classes=len(label_dict),
         class_weight=class_weights,
         tokenizer=tokenizer,
@@ -110,7 +110,7 @@ def train_stif(
     trainer = Trainer(
         accelerator=device,
         devices=1,
-        val_check_interval=30,
+        val_check_interval=50,
         max_epochs=500,
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],

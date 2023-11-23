@@ -24,6 +24,7 @@ class LitTaggerOrInsertion(LightningModule):
         is_insertion=False,
         use_pointer=False,
         pointer_config=None,
+        only_train_pointer=False,
     ) -> None:
         super().__init__()
         self.model = model
@@ -46,6 +47,7 @@ class LitTaggerOrInsertion(LightningModule):
                 pointer_config, previous_hidden_dim=model.config.hidden_size
             )
         )
+        self.only_train_pointer = only_train_pointer
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -159,6 +161,9 @@ class LitTaggerOrInsertion(LightningModule):
         return loss
 
     def configure_optimizers(self):
+        if self.only_train_pointer:
+            optimizer = AdamW(self.pointer_model.parameters(), lr=self.lr)
+            return optimizer
         if self.use_pointer:
             optimizer = AdamW(
                 itertools.chain(self.model.parameters(), self.pointer_model.parameters()),

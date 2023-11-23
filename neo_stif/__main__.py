@@ -111,7 +111,7 @@ def taggerpoint(
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="output/stif-i-f/felix-tagger-pointer/",
-        filename="{epoch}-{val_loss:.2f}-{f1_val_step:.2f}",
+        filename="{epoch}-{val_loss:.2f}",
         save_top_k=1,
         save_last=True,
         monitor="val_loss",
@@ -171,6 +171,7 @@ def taggerpoint(
         devices=1,
         val_check_interval=30,
         max_epochs=500,
+        precision="bf16-mixed",
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
     )
