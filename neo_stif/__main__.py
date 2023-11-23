@@ -171,7 +171,7 @@ def taggerpoint(
         devices=1,
         val_check_interval=30,
         max_epochs=500,
-        precision="bf16-mixed",
+        precision="16-mixed",
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
     )
