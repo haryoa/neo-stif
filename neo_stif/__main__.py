@@ -145,8 +145,8 @@ def taggerpoint(
     pointer_network_config = BertConfig(
         vocab_size=len(label_dict) + 1,
         num_hidden_layers=2,
-        hidden_size=768,
-        num_attention_heads=1,
+        hidden_size=256,
+        num_attention_heads=4,
         pad_token_id=len(label_dict),
     )  # + 1 as the pad token
 

@@ -150,11 +150,8 @@ class PointerNetwork(nn.Module):
         # embeddings = input_embeds
         if self.position_embedding_type == "absolute":
             position_embeddings = self.position_embeddings(position_ids)
-            print(position_embeddings.shape)
             # make the dimension of position_embeddings the same as input_embeds
             position_embeddings = position_embeddings.expand_as(input_embeds)
-            print(position_embeddings.shape)
-            print(input_embeds.shape)
             # embeddings += position_embeddings
 
         # embeddings = self.LayerNorm(embeddings)
@@ -186,8 +183,8 @@ class PointerNetwork(nn.Module):
         )
 
         bert_output = pointer_input
-        for i, layer_module in enumerate(self.bert_layer):
-            bert_output = layer_module(bert_output, extended_attention_mask)[0]
+        # for i, layer_module in enumerate(self.bert_layer):
+        #     bert_output = layer_module(bert_output, extended_attention_mask)[0]
 
         # print(bert_output[0].shape)
         _, last_attention = self.last_attention(
