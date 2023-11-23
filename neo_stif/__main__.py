@@ -112,7 +112,8 @@ def taggerpoint(
     checkpoint_callback = ModelCheckpoint(
         dirpath="output/stif-i-f/felix-tagger-pointer/",
         filename="{epoch}-{val_loss:.2f}-{f1_val_step:.2f}",
-        save_top_k=2,
+        save_top_k=1,
+        save_last=True,
         monitor="val_loss",
         mode="min",
     )
@@ -144,14 +145,14 @@ def taggerpoint(
     pointer_network_config = BertConfig(
         vocab_size=len(label_dict) + 1,
         num_hidden_layers=2,
-        hidden_size=100,
+        hidden_size=768,
         num_attention_heads=1,
         pad_token_id=len(label_dict),
     )  # + 1 as the pad token
 
     lit_tagger = LitTaggerOrInsertion(
         pre_trained_bert,
-        lr=5e-5,
+        lr=2e-5,
         num_classes=len(label_dict),
         class_weight=class_weights,
         tokenizer=tokenizer,
@@ -169,8 +170,9 @@ def taggerpoint(
         accelerator=device,
         devices=1,
         val_check_interval=20,
+        max_epochs=100,
         check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback, ea_stop],
+        callbacks=[rich_cb, checkpoint_callback],
     )
     trainer.fit(lit_tagger, train_dl, dev_dl)
 
