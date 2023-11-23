@@ -3,6 +3,7 @@ from torch.optim import AdamW
 from neo_stif.components.models import PointerNetwork
 from torchmetrics import F1Score
 from torch.nn import CrossEntropyLoss
+import itertools
 
 
 class LitTaggerOrInsertion(LightningModule):
@@ -48,10 +49,22 @@ class LitTaggerOrInsertion(LightningModule):
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
-    
-    def forward_pointer(self, input_ids, attention_mask, token_type_ids, previous_last_hidden, labels=None):
-        return self.pointer_model(input_ids, attention_mask, token_type_ids, previous_last_hidden, labels=labels)
 
+    def forward_pointer(
+        self,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        previous_last_hidden,
+        labels=None,
+    ):
+        return self.pointer_model(
+            input_ids,
+            attention_mask,
+            token_type_ids,
+            previous_last_hidden,
+            labels=labels,
+        )
 
     def training_step(self, batch, batch_idx):
         input_to_model = {
@@ -70,8 +83,10 @@ class LitTaggerOrInsertion(LightningModule):
                 if k in ["input_ids", "attention_mask", "token_type_ids"]
             }
             input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
-            input_to_pointer['labels'] = batch["point_labels"]
-            loss_pointer, last_att = self.forward_pointer(**input_to_pointer, previous_last_hidden=last_hidden)
+            input_to_pointer["labels"] = batch["point_labels"]
+            loss_pointer, last_att = self.forward_pointer(
+                **input_to_pointer, previous_last_hidden=last_hidden
+            )
             loss = loss + loss_pointer
         self.log("train_loss", loss, prog_bar=True)
         return loss
@@ -106,7 +121,7 @@ class LitTaggerOrInsertion(LightningModule):
                 pred = tag_pred.logits[0].argmax(-1).detach().cpu().numpy()
                 pred_label = [label_map[z] for z in pred]
                 print(f"Input, pred: {list(zip(input_ids_decoded, pred_label))}")
-            
+
         # self.val_f1(tag_pred.logits.argmax(-1), batch[self.label_var_name])
         # self.log("f1_val", self.val_f1, on_epoch=True, prog_bar=True)
         if self.use_pointer:
@@ -116,10 +131,19 @@ class LitTaggerOrInsertion(LightningModule):
                 if k in ["input_ids", "attention_mask", "token_type_ids"]
             }
             input_to_pointer["input_ids"] = batch.pop("tag_labels_input")
-            input_to_pointer['labels'] = batch["point_labels"]
-            loss_pointer, _ = self.forward_pointer(**input_to_pointer, previous_last_hidden=last_hidden)
+            input_to_pointer["labels"] = batch["point_labels"]
+
+            loss_pointer, last_attention = self.forward_pointer(
+                **input_to_pointer, previous_last_hidden=last_hidden
+            )
             loss = loss + loss_pointer
-            self.log('pointer_loss', loss_pointer, prog_bar=True)
+
+            if batch_idx == 0:
+                print(
+                    f"Pair of input_ids + labels + point_labels: {input_to_pointer[0], i, input_to_pointer[2]}"
+                )
+
+            self.log("pointer_loss", loss_pointer, prog_bar=True)
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
@@ -135,7 +159,13 @@ class LitTaggerOrInsertion(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.model.parameters(), lr=self.lr)
+        if self.use_pointer:
+            optimizer = AdamW(
+                itertools.chain(self.model.parameters(), self.pointer_model.parameters()),
+                lr=self.lr,
+            )
+        else:
+            optimizer = AdamW(self.model.parameters(), lr=self.lr)
         return optimizer
 
 
