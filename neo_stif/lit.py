@@ -169,57 +169,57 @@ class LitTaggerOrInsertion(LightningModule):
         return optimizer
 
 
-class LitPointer(LightningModule):
-    """
-    Class Training Pointers
-    """
+# class LitPointer(LightningModule):
+#     """
+#     Class Training Pointers
+#     """
 
-    def __init__(self, config, lr, num_classes=None) -> None:
-        super().__init__()
-        self.model = PointerNetwork(config)
-        self.lr = lr
+#     def __init__(self, config, lr, num_classes=None) -> None:
+#         super().__init__()
+#         self.model = PointerNetwork(config)
+#         self.lr = lr
 
-    def forward(self, *args, **kwargs):
-        return self.model(*args, **kwargs)
+#     def forward(self, *args, **kwargs):
+#         return self.model(*args, **kwargs)
 
-    def training_step(self, batch, batch_idx):
-        input_to_model = {
-            k: v
-            for k, v in batch.items()
-            if k in ["input_ids", "attention_mask", "token_type_ids"]
-        }
-        input_to_model["input_ids"] = batch.pop("tag_labels_input")
+#     def training_step(self, batch, batch_idx):
+#         input_to_model = {
+#             k: v
+#             for k, v in batch.items()
+#             if k in ["input_ids", "attention_mask", "token_type_ids"]
+#         }
+#         input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
-        tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss, last_att = tag_pred
-        return loss
+#         tag_pred = self(**input_to_model, labels=batch["point_labels"])
+#         loss, last_att = tag_pred
+#         return loss
 
-    def validation_step(self, batch, batch_idx):
-        input_to_model = {
-            k: v
-            for k, v in batch.items()
-            if k in ["input_ids", "attention_mask", "token_type_ids"]
-        }
-        input_to_model["input_ids"] = batch.pop("tag_labels_input")
+#     def validation_step(self, batch, batch_idx):
+#         input_to_model = {
+#             k: v
+#             for k, v in batch.items()
+#             if k in ["input_ids", "attention_mask", "token_type_ids"]
+#         }
+#         input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
-        tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss, last_att = tag_pred
-        self.log("val_loss", loss, prog_bar=True)
-        return loss
+#         tag_pred = self(**input_to_model, labels=batch["point_labels"])
+#         loss, last_att = tag_pred
+#         self.log("val_loss", loss, prog_bar=True)
+#         return loss
 
-    def test_step(self, batch, batch_idx):
-        input_to_model = {
-            k: v
-            for k, v in batch.items()
-            if k in ["input_ids", "attention_mask", "token_type_ids"]
-        }
-        input_to_model["input_ids"] = batch.pop("tag_labels_input")
+#     def test_step(self, batch, batch_idx):
+#         input_to_model = {
+#             k: v
+#             for k, v in batch.items()
+#             if k in ["input_ids", "attention_mask", "token_type_ids"]
+#         }
+#         input_to_model["input_ids"] = batch.pop("tag_labels_input")
 
-        tag_pred = self(**input_to_model, labels=batch["point_labels"])
-        loss, last_att = tag_pred
-        self.log("test_loss", loss, prog_bar=True)
-        return loss
+#         tag_pred = self(**input_to_model, labels=batch["point_labels"])
+#         loss, last_att = tag_pred
+#         self.log("test_loss", loss, prog_bar=True)
+#         return loss
 
-    def configure_optimizers(self):
-        optimizer = AdamW(self.model.parameters(), lr=self.lr)
-        return optimizer
+#     def configure_optimizers(self):
+#         optimizer = AdamW(self.model.parameters(), lr=self.lr)
+#         return optimizer
