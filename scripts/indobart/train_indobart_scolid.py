@@ -9,7 +9,7 @@ from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 
 MODEL_NAME = "indobenchmark/indobart-v2"
 TRAIN_CSV = "data/scolid/train.csv"
-VAL_CSV = "data/scolid/dev.csv"
+VAL_CSV = "data/scolid/val.csv"
 
 
 def tokenize_function(examples, tokenizer, src="informal", tgt="formal"):
