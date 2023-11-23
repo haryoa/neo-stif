@@ -96,7 +96,7 @@ def insertion(
     trainer.fit(lit_insert, train_dl, dev_dl)
 
 
-def taggerpoint(
+def taggerpoint(    
     df_train,
     data_train,
     tokenizer,
@@ -309,7 +309,7 @@ def train_stif(
     part: str = "tagger",
     model="koto",
     batch_size=32,
-    with_validation=False,
+    with_validation=False, 
     do_compute_class_weight=False,
     device="cuda",
 ):

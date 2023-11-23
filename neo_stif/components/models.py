@@ -150,6 +150,11 @@ class PointerNetwork(nn.Module):
         # embeddings = input_embeds
         if self.position_embedding_type == "absolute":
             position_embeddings = self.position_embeddings(position_ids)
+            print(position_embeddings.shape)
+            # make the dimension of position_embeddings the same as input_embeds
+            position_embeddings = position_embeddings.expand_as(input_embeds)
+            print(position_embeddings.shape)
+            print(input_embeds.shape)
             # embeddings += position_embeddings
 
         # embeddings = self.LayerNorm(embeddings)
