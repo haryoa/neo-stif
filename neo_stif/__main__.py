@@ -152,7 +152,7 @@ def taggerpoint(
 
     lit_tagger = LitTaggerOrInsertion(
         pre_trained_bert,
-        lr=1e-5,
+        lr=2e-5,
         num_classes=len(label_dict),
         class_weight=class_weights,
         tokenizer=tokenizer,
@@ -170,7 +170,7 @@ def taggerpoint(
         accelerator=device,
         devices=1,
         val_check_interval=30,
-        max_epochs=200,
+        max_epochs=500,
         check_val_every_n_epoch=None,
         callbacks=[rich_cb, checkpoint_callback],
     )
