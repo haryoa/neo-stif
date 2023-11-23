@@ -183,8 +183,8 @@ class PointerNetwork(nn.Module):
         )
 
         bert_output = pointer_input
-        # for i, layer_module in enumerate(self.bert_layer):
-        #     bert_output = layer_module(bert_output, extended_attention_mask)[0]
+        for i, layer_module in enumerate(self.bert_layer):
+            bert_output = layer_module(bert_output, extended_attention_mask)[0]
 
         # print(bert_output[0].shape)
         _, last_attention = self.last_attention(
