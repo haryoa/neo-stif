@@ -150,7 +150,7 @@ def train_stif(
     # Callback for trainer
 
     df_train = pd.read_csv(train_path)
-    data_train = datasets.Dataset.from_pandas(df_train)
+    data_train = datasets.Dataset.from_pandas(df_train) 
     data_train, label_dict = prepare_data_tagging_and_pointer(
         data_train, tokenizer, label_dict
     )
