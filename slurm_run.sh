@@ -6,7 +6,7 @@
 #SBATCH --mem=24G
 #SBATCH --cpus-per-task=24
 #SBATCH --gres=gpu:1
-#SBATCH -p gpu
+#SBATCH -p ws-ia*
 #SBATCH --qos=gpu-8
 #SBATCH --time=12:00:00
 
