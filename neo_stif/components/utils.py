@@ -1,3 +1,7 @@
+import torch
+from neo_stif.components.extract_insertion import create_masked_source
+
+
 def create_label_map(max_mask: int = 5, use_pointing: bool = True):
     """Creates label map for insertion model.
 
@@ -83,3 +87,24 @@ def compute_class_weights(labels, num_classes=39):
     for a,b in list(zip(unique_y, cls_weight)):
         zeros[a] = b
     return zeros
+
+
+def process_masked_source(x, tokenizer, label_map, src='informal', tgt='formal'):
+    dict_return = {}
+    informal = tokenizer.tokenize(x[src], add_special_tokens=True)
+    formal = tokenizer.tokenize(x[tgt], add_special_tokens=True)
+    point_indexes = x["point_labels"]
+    tag_label = x["tag_labels"]
+    masked_tokens, target_tokens = create_masked_source(
+        informal, tag_label, point_indexes, formal, label_map
+    )
+    masked_tokens_ids = [tokenizer.vocab[i] for i in masked_tokens]
+    target_tokens_ids = [tokenizer.vocab[i] for i in target_tokens]
+    attention_mask = [1] * len(masked_tokens_ids)
+    token_type_ids = [0] * len(masked_tokens_ids)
+
+    dict_return["input_ids"] = torch.LongTensor(masked_tokens_ids)
+    dict_return["attention_mask"] = torch.LongTensor(attention_mask)
+    dict_return["token_type_ids"] = torch.LongTensor(token_type_ids)
+    dict_return["labels"] = torch.LongTensor(target_tokens_ids)
+    return dict_return

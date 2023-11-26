@@ -3,7 +3,11 @@ from transformers import (
     AutoTokenizer,
 )
 from neo_stif.components.trying import PointingConverter
-from neo_stif.components.utils import create_label_map, get_pointer_and_label
+from neo_stif.components.utils import (
+    create_label_map,
+    get_pointer_and_label,
+    process_masked_source,
+)
 import pandas as pd
 from neo_stif.components.train_data_preparation import prepare_data_tagging_and_pointer
 import datasets
@@ -23,7 +27,37 @@ LR_INSERTION = 2e-5  # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
 
 
-def generate_data_for_felix(
+def generate_data_for_felix_insertion(
+    data_path,
+    out_path,
+    src: str = "informal",
+    tgt: str = "formal",
+    tokenizer_name: str = "indolem/indobert-base-uncased",
+):
+    label_dict = create_label_map(MAX_MASK, USE_POINTING)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    df = pd.read_csv(data_path)
+    data = datasets.Dataset.from_pandas(df)
+    data, label_dict = prepare_data_tagging_and_pointer(data, tokenizer, label_dict)
+    console.log("Loaded data from [red]{}[/red]".format(data_path))
+    console.log("Creating data for insertion...")
+    data_processed = data.map(
+        process_masked_source,
+        batched=False,
+        fn_kwargs={
+            "tokenizer": tokenizer,
+            "label_map": label_dict,
+            "src": src,
+            "tgt": tgt,
+        },
+        num_proc=12,
+    )
+    console.log("Created data for insertion")
+    console.log("Saving to [red]{}[/red]".format(out_path))
+    data_processed.save_to_disk(out_path)
+
+
+def generate_data_for_felix_tagging(
     data_path,
     out_path,
     src: str = "informal",
@@ -40,7 +74,7 @@ def generate_data_for_felix(
         tgt (str, optional): The column name for the target text. Defaults to "formal".
         tokenizer_name (str, optional): The name of the tokenizer to use. Defaults to "indolem/indobert-base-uncased".
     """
-    
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     df = pd.read_csv(data_path)
@@ -109,7 +143,7 @@ def train_stif(
     Returns:
         None
     """
-    
+
     tokenizer = AutoTokenizer.from_pretrained("indolem/indobert-base-uncased")
     label_dict = create_label_map(MAX_MASK, USE_POINTING)
 
