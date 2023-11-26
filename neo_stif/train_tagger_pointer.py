@@ -1,5 +1,10 @@
 import fire
-from transformers import AutoTokenizer, BertForTokenClassification, BertConfig, BertForMaskedLM
+from transformers import (
+    AutoTokenizer,
+    BertForTokenClassification,
+    BertConfig,
+    BertForMaskedLM,
+)
 from neo_stif.components.utils import create_label_map
 import pandas as pd
 from neo_stif.components.train_data_preparation import prepare_data_tagging_and_pointer
@@ -13,8 +18,7 @@ from neo_stif.components.utils import compute_class_weights
 from datasets import load_from_disk
 
 
-
-def taggerpoint(    
+def taggerpoint(
     df_train,
     data_train,
     tokenizer,
@@ -31,6 +35,8 @@ def taggerpoint(
     hidden_size_pointer=64,
     num_hidden_layers_pointer=2,
     from_scratch=False,
+    src_label="informal",
+    tgt_label="formal",
 ):
     rich_cb = RichProgressBar()
 
@@ -59,21 +65,25 @@ def taggerpoint(
             data_dev,
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
+            collate_fn=FelixCollator(
+                tokenizer,
+                pad_label_as_input=len(label_dict),
+                src=src_label,
+                tgt=tgt_label,
+            ),
         )
 
     if from_scratch:
-        # copy config from model_path_or_name 
+        # copy config from model_path_or_name
         # and change the number of labels
 
         bert_config = BertConfig.from_pretrained(model_path_or_name)
         bert_config.num_labels = len(label_dict)
-        pre_trained_bert = BertForTokenClassification(bert_config) # from scratch
+        pre_trained_bert = BertForTokenClassification(bert_config)  # from scratch
     else:
         pre_trained_bert = BertForTokenClassification.from_pretrained(
             model_path_or_name, num_labels=len(label_dict)
         )
-    
 
     pointer_network_config = BertConfig(
         vocab_size=len(label_dict) + 1,

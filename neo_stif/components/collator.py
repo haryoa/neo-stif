@@ -4,12 +4,22 @@
 from copy import deepcopy
 import torch
 
+
 class FelixCollator:
-    def __init__(self, tokenizer, pad_label=-100, pad_label_as_input=80):
+    def __init__(
+        self,
+        tokenizer,
+        pad_label=-100,
+        pad_label_as_input=80,
+        src="informal",
+        tgt="formal",
+    ):
         # change the pad_label_as_input and point_label_as_input
         # these must be the len of the label vocab and point_label vocab
         self.tokenizer = tokenizer
         self.pad_label = pad_label
+        self.src = src
+        self.tgt = tgt
         self.pad_label_as_input = pad_label_as_input
 
     def __call__(self, batch):
@@ -18,11 +28,11 @@ class FelixCollator:
         informal_input_ids, informal_attention_mask = [
             [i[col] for i in batch]
             for col in [
-                "informal_input_ids",
-                "informal_attention_mask",
+                f"{self.src}_input_ids",
+                f"{self.src}_attention_mask",
             ]
         ]
-        formal_input_ids = [i["formal_input_ids"] for i in batch]
+        formal_input_ids = [i[f"{self.tgt}_input_ids"] for i in batch]
 
         tag_label = [i["tag_labels"] for i in batch]
 
@@ -80,7 +90,7 @@ class FelixInsertionCollator:
         # change the pad_label_as_input and point_label_as_input
         # these must be the len of the label vocab and point_label vocab
         self.tokenizer = tokenizer
-        self.mask_token_id = tokenizer.vocab['[MASK]']
+        self.mask_token_id = tokenizer.vocab["[MASK]"]
         self.mask_label_id = mask_label_id
 
     def __call__(self, batch):
@@ -128,10 +138,10 @@ class FelixInsertionCollator:
 
         masked_bool = tokenized_output["input_ids"] == self.mask_token_id
         # Now, change label if not masked
-        out_modified[~masked_bool] = self.mask_label_id # -100
+        out_modified[~masked_bool] = self.mask_label_id  # -100
 
         # collect them to output_dict
         output_dict.update(tokenized_output)
         output_dict["labels"] = out_modified
-    
+
         return output_dict
