@@ -1,344 +1,131 @@
 import fire
-from transformers import AutoTokenizer, BertForTokenClassification, BertConfig, BertForMaskedLM
-from neo_stif.components.utils import create_label_map
+from transformers import (
+    AutoTokenizer,
+)
+from neo_stif.components.trying import PointingConverter
+from neo_stif.components.utils import create_label_map, get_pointer_and_label
 import pandas as pd
 from neo_stif.components.train_data_preparation import prepare_data_tagging_and_pointer
 import datasets
-from neo_stif.lit import LitTaggerOrInsertion
-from torch.utils.data import DataLoader
-from neo_stif.components.collator import FelixCollator, FelixInsertionCollator
-from lightning import Trainer
-from lightning.pytorch.callbacks import RichProgressBar, ModelCheckpoint, EarlyStopping
-from neo_stif.components.utils import compute_class_weights
-from datasets import load_from_disk
+from neo_stif.train_insertion import insertion
+from neo_stif.train_tagger_pointer import taggerpoint
+import rich
+
+console = rich.console.Console()
 
 
 MAX_MASK = 30
 USE_POINTING = True
-
-
 model_dict = {"koto": "indolem/indobert-base-uncased"}
-
-
-LR_TAGGER = 5e-5 # due to the pre-trained nature
-LR_POINTER = 1e-5 # no pre-trained
-LR_INSERTION = 2e-5 # due to the pre-trained nature
+LR_TAGGER = 5e-5  # due to the pre-trained nature
+LR_POINTER = 1e-5  # no pre-trained
+LR_INSERTION = 2e-5  # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
 
 
-def insertion(
-    processed_train_data,
-    processed_dev_data,
-    tokenizer,
-    batch_size,
-    model_path_or_name,
-    device="cuda",
-    label_dict=None,
+def generate_data_for_felix(
+    data_path,
+    out_path,
+    src: str = "informal",
+    tgt: str = "formal",
+    tokenizer_name: str = "indolem/indobert-base-uncased",
 ):
     """
-    Perform insertion task using the given parameters.
+    Generate data for Felix.
 
     Args:
-        processed_train_data (str): Filepath to the processed training data.
-        processed_dev_data (str): Filepath to the processed development data.
-        tokenizer: Tokenizer object used for tokenizing the data.
-        batch_size (int): Number of samples per batch.
-        model_path_or_name (str): Path or name of the pre-trained model.
-        device (str, optional): Device to use for training. Defaults to "cuda".
-        label_dict (dict, optional): Dictionary mapping labels to their indices. Defaults to None.
+        data_path (str): The path to the input data file.
+        out_path (str): The path to save the generated data.
+        src (str, optional): The column name for the source text. Defaults to "informal".
+        tgt (str, optional): The column name for the target text. Defaults to "formal".
+        tokenizer_name (str, optional): The name of the tokenizer to use. Defaults to "indolem/indobert-base-uncased".
+    """
+    
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+
+    df = pd.read_csv(data_path)
+    console.print("Loaded data from {}".format(data_path))
+    # replace such words with xWORDx
+    df[src] = df[src].str.replace("xxx", "x")
+    df[tgt] = df[tgt].str.replace("xxx", "x")
+
+    label_dict = create_label_map(MAX_MASK, USE_POINTING)
+    point_converter = PointingConverter({}, False)
+    console.print("Created label map and pointing converter")
+    a = df.apply(
+        lambda x: get_pointer_and_label(
+            x,
+            label_dict,
+            point_converter,
+            tokenizer,
+            src=src,
+            tgt=tgt,
+        ),
+        axis=1,
+    )
+    # unpack to two series
+    point_indexes, label = zip(*a)
+    df["point_indexes"] = point_indexes
+    df["label"] = label
+
+    df.to_csv(out_path, index=False)
+    console.print("Saved to {}".format(out_path))
+
+
+def train_stif(
+    part: str = "taggerpointer",
+    model="koto",
+    batch_size=32,
+    with_validation=False,
+    do_compute_class_weight=False,
+    device="cuda",
+    train_path="data/stif_indo/train_with_pointing.csv",
+    dev_path="data/stif_indo/dev_with_pointing.csv",
+    processed_train_data_path="data/stif_indo/train_insertion",
+    processed_dev_data_path="data/stif_indo/dev_insertion",
+    output_dir_path="output/stif-i-f/felix-tagger-pointer/",
+    from_scratch=False,
+):
+    """
+    Trains the STIF model.
+
+    Args:
+        part (str): The part of the model to train. Options are "taggerpointer" and "insertion".
+        model (str): The name of the model to use.
+        batch_size (int): The batch size for training.
+        with_validation (bool): Whether to use a validation dataset during training.
+        do_compute_class_weight (bool): Whether to compute class weights for imbalanced datasets.
+        device (str): The device to use for training. Defaults to "cuda".
+        train_path (str): The path to the training data.
+        dev_path (str): The path to the validation data.
+        processed_train_data_path (str): The path to the processed training data.
+        processed_dev_data_path (str): The path to the processed validation data.
+        output_dir_path (str): The path to the output directory.
+        from_scratch (bool): Whether to train the model from scratch.
+
+    Raises:
+        ValueError: If an invalid part is specified.
 
     Returns:
         None
     """
     
-    rich_cb = RichProgressBar()
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="output/stif-i-f/felix-insert/",
-        filename="{epoch}-{val_loss:.2f}",
-        save_top_k=1,
-        save_last=True,
-        monitor="val_loss",
-        mode="min",
-    )
-    # ea_stop = EarlyStopping(patience=5, monitor="val_loss", mode="min")
-    train_data = load_from_disk(processed_train_data)
-    dev_data = load_from_disk(processed_dev_data)
-    train_dl = DataLoader(
-        train_data,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=FelixInsertionCollator(tokenizer),
-    )
-    dev_dl = DataLoader(
-        dev_data,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=FelixInsertionCollator(tokenizer),
-    )
-    model = BertForMaskedLM.from_pretrained(model_path_or_name)
-    lit_insert = LitTaggerOrInsertion(
-        model,
-        lr=LR_INSERTION,
-        num_classes=model.config.vocab_size,
-        class_weight=None,
-        tokenizer=tokenizer,
-        label_dict=label_dict,
-        is_insertion=True,
-    )
-    trainer = Trainer(
-        accelerator=device,
-        devices=1,
-        max_epochs=20,
-        # val_check_interval=20,
-        # check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback],
-    )
-    trainer.fit(lit_insert, train_dl, dev_dl)
-
-
-def taggerpoint(    
-    df_train,
-    data_train,
-    tokenizer,
-    batch_size,
-    model_path_or_name,
-    with_validation=False,
-    do_compute_class_weight=False,
-    device="cuda",
-    label_dict=None,
-):
-    rich_cb = RichProgressBar()
-
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="output/stif-i-f/felix-tagger-pointer/",
-        filename="{epoch}-{val_loss:.2f}",
-        save_top_k=1,
-        save_last=True,
-        monitor="val_loss",
-        mode="min",
-    )
-    ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
-    dev_dl = None
-    class_weights = (
-        compute_class_weights(df_train.label.apply(eval), num_classes=len(label_dict))
-        if do_compute_class_weight
-        else None
-    )
-    print(class_weights)
-    if with_validation:
-        df_dev = pd.read_csv("data/stif_indo/dev_with_pointing.csv")
-        data_dev = datasets.Dataset.from_pandas(df_dev)
-        data_dev, label_dict = prepare_data_tagging_and_pointer(
-            data_dev, tokenizer, label_dict
-        )
-        dev_dl = DataLoader(
-            data_dev,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-        )
-
-    pre_trained_bert = BertForTokenClassification.from_pretrained(
-        model_path_or_name, num_labels=len(label_dict)
-    )
-
-    pointer_network_config = BertConfig(
-        vocab_size=len(label_dict) + 1,
-        num_hidden_layers=2,
-        hidden_size=64,
-        num_attention_heads=1,
-        pad_token_id=len(label_dict),
-    )  # + 1 as the pad token
-
-    lit_tagger = LitTaggerOrInsertion(
-        pre_trained_bert,
-        lr=3e-5,
-        num_classes=len(label_dict),
-        class_weight=class_weights,
-        tokenizer=tokenizer,
-        label_dict=label_dict,
-        use_pointer=USE_POINTING,
-        pointer_config=pointer_network_config,
-    )
-    train_dl = DataLoader(
-        data_train,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-    )
-    trainer = Trainer(
-        accelerator=device,
-        devices=1,
-        val_check_interval=30,
-        max_epochs=500,
-        precision="16-mixed",
-        check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback],
-    )
-    trainer.fit(lit_tagger, train_dl, dev_dl)
-
-
-def tagger(
-    df_train,
-    data_train,
-    tokenizer,
-    batch_size,
-    model_path_or_name,
-    with_validation=False,
-    do_compute_class_weight=False,
-    device="cuda",
-    label_dict=None,
-):
-    rich_cb = RichProgressBar()
-
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="output/stif-i-f/felix-tagger/",
-        filename="{epoch}-{val_loss:.2f}-{f1_val_step:.2f}",
-        save_top_k=2,
-        monitor="val_loss",
-        mode="min",
-    )
-    ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
-    dev_dl = None
-    class_weights = (
-        compute_class_weights(df_train.label.apply(eval), num_classes=len(label_dict))
-        if do_compute_class_weight
-        else None
-    )
-    print(class_weights)
-    if with_validation:
-        df_dev = pd.read_csv("data/stif_indo/dev_with_pointing.csv")
-        data_dev = datasets.Dataset.from_pandas(df_dev)
-        data_dev, label_dict = prepare_data_tagging_and_pointer(
-            data_dev, tokenizer, label_dict
-        )
-        dev_dl = DataLoader(
-            data_dev,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-        )
-
-    pre_trained_bert = BertForTokenClassification.from_pretrained(
-        model_path_or_name, num_labels=len(label_dict)
-    )
-    lit_tagger = LitTaggerOrInsertion(
-        pre_trained_bert,
-        lr=LR_TAGGER,
-        num_classes=len(label_dict),
-        class_weight=class_weights,
-        tokenizer=tokenizer,
-        label_dict=label_dict,
-    )
-    train_dl = DataLoader(
-        data_train,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-    )
-    trainer = Trainer(
-        accelerator=device,
-        devices=1,
-        val_check_interval=20,
-        check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback, ea_stop],
-    )
-    trainer.fit(lit_tagger, train_dl, dev_dl)
-
-
-def pointer(
-    data_train,
-    tokenizer,
-    batch_size,
-    with_validation=False,
-    device="cuda",
-    label_dict=None,
-):
-    rich_cb = RichProgressBar()
-    pointer_network_config = BertConfig(
-        vocab_size=len(label_dict) + 1,
-        num_hidden_layers=2,
-        num_attention_heads=1,
-        pad_token_id=len(label_dict),
-    )  # + 1 as the pad token
-    lit_pointer = LitPointer(
-        pointer_network_config,
-        lr=LR_POINTER,
-        num_classes=None
-    )
-
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="output/stif-i-f/felix-pointer/",
-        filename="{epoch}-{val_loss:.2f}-{f1_val_step:.2f}",
-        save_top_k=2,
-        monitor="val_loss",
-        mode="min",
-    )
-    # ea_stop = EarlyStopping(patience=15, monitor="val_loss", mode="min")
-    dev_dl = None
-
-    if with_validation:
-        df_dev = pd.read_csv("data/stif_indo/dev_with_pointing.csv")
-        data_dev = datasets.Dataset.from_pandas(df_dev)
-        data_dev, label_dict = prepare_data_tagging_and_pointer(
-            data_dev, tokenizer, label_dict
-        )
-        dev_dl = DataLoader(
-            data_dev,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-        )
-
-    train_dl = DataLoader(
-        data_train,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=FelixCollator(tokenizer, pad_label_as_input=len(label_dict)),
-    )
-    trainer = Trainer(
-        accelerator=device,
-        devices=1,
-        # val_check_interval=20,
-        # check_val_every_n_epoch=None,
-        callbacks=[rich_cb, checkpoint_callback],
-    )
-    trainer.fit(lit_pointer, train_dl, dev_dl)
-
-
-def train_stif(
-    part: str = "tagger",
-    model="koto",
-    batch_size=32,
-    with_validation=False, 
-    do_compute_class_weight=False,
-    device="cuda",
-):
     tokenizer = AutoTokenizer.from_pretrained("indolem/indobert-base-uncased")
     label_dict = create_label_map(MAX_MASK, USE_POINTING)
 
     # Callback for trainer
 
-    df_train = pd.read_csv("data/stif_indo/train_with_pointing.csv")
+    df_train = pd.read_csv(train_path)
     data_train = datasets.Dataset.from_pandas(df_train)
     data_train, label_dict = prepare_data_tagging_and_pointer(
         data_train, tokenizer, label_dict
     )
     model_path_or_name = model_dict[model]
 
-    if part == "tagger":
-        tagger(
-            df_train,
-            data_train,
-            tokenizer,
-            batch_size,
-            model_path_or_name,
-            with_validation,
-            do_compute_class_weight,
-            device,
-            label_dict,
-        )
-    elif part == "taggerpointer":
+    if with_validation:
+        df_dev = pd.read_csv(dev_path)
+
+    if part == "taggerpointer":
         taggerpoint(
             df_train,
             data_train,
@@ -349,29 +136,28 @@ def train_stif(
             do_compute_class_weight,
             device,
             label_dict,
-        )
-    elif part == "pointer":
-        pointer(
-            data_train,
-            tokenizer,
-            batch_size,
-            with_validation,
-            device,
-            label_dict,
+            df_dev,
+            USE_POINTING,
+            output_dir_path,
+            LR_TAGGER,
+            from_scratch=from_scratch,
         )
     elif part == "insertion":
-        processed_train_data = "data/stif_indo/train_insertion"
-        processed_dev_data = "data/stif_indo/dev_insertion"
         insertion(
-            processed_train_data,
-            processed_dev_data,
+            processed_train_data_path,
+            processed_dev_data_path,
             tokenizer,
             batch_size,
             model_path_or_name,
             device,
             label_dict,
+            output_dir_path,
+            LR_INSERTION,
+            from_scratch=from_scratch,
         )
+    else:
+        raise ValueError("Invalid part: {}".format(part))
 
 
 if __name__ == "__main__":
-    fire.Fire(train_stif)
+    fire.Fire()

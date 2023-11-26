@@ -43,7 +43,7 @@ def create_pointer_labels(points, label_map):
     return new_labels
 
 
-def get_pointer_and_label(x, label_dict, point_converter, tokenizer_bert):
+def get_pointer_and_label(x, label_dict, point_converter, tokenizer_bert, src='informal', tgt='formal'):
     """
     Creates labels for the pointing model.
 
@@ -60,10 +60,10 @@ def get_pointer_and_label(x, label_dict, point_converter, tokenizer_bert):
         DELETE, MASK|1, MASK|2...).
     """
 
-    informal_instance = tokenizer_bert.tokenize(x.informal, add_special_tokens=True)
-    formal_instance = tokenizer_bert.tokenize(x.formal, add_special_tokens=True)
+    src_instance = tokenizer_bert.tokenize(x[src], add_special_tokens=True)
+    tgt_instance = tokenizer_bert.tokenize(x[tgt], add_special_tokens=True)
     points = point_converter.compute_points(
-        informal_instance, " ".join(formal_instance)
+        src_instance, " ".join(tgt_instance)
     )
     label = create_pointer_labels(points, label_dict)
     point_indexes = [t.point_index for t in points]

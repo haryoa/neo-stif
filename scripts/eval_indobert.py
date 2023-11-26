@@ -8,14 +8,14 @@ from evaluate import load
 import numpy as np
 
 
-def main(model_name, csv_path, out_path):
-
+def main(model_name, csv_path, out_path, device='cpu'):
+    print(f"{model_name} {csv_path} {out_path}")
     tokenizer = IndoNLGTokenizer.from_pretrained("indobenchmark/indobart-v2")
-    model = MBartForConditionalGeneration.from_pretrained(model_name)
+    model = MBartForConditionalGeneration.from_pretrained(model_name).to(device)
     df = pd.read_csv(csv_path)
     inf_result = []
     for inf in tqdm(df.informal):
-        inp_to_model = tokenizer(inf, return_tensors='pt')['input_ids']
+        inp_to_model = tokenizer(inf, return_tensors='pt')['input_ids'].to(device)
         result = model.generate(
             inp_to_model, num_beams=10, max_length=100
         )
