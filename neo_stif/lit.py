@@ -32,9 +32,6 @@ class LitTaggerOrInsertion(LightningModule):
         self.class_weight = class_weight
         self.ce_loss = CrossEntropyLoss(class_weight)
         self.num_labels = num_classes
-        # self.val_f1 = F1Score(
-        #     "multiclass", average="macro", num_classes=num_classes, ignore_index=-100
-        # )
         self.tokenizer = tokenizer
         self.label_dict = {j: i for i, j in label_dict.items()}
         self.is_insertion = is_insertion

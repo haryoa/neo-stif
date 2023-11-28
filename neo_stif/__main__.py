@@ -1,4 +1,5 @@
 import fire
+from tqdm import tqdm
 from transformers import (
     AutoTokenizer,
 )
@@ -14,6 +15,9 @@ import datasets
 from neo_stif.train_insertion import insertion
 from neo_stif.train_tagger_pointer import taggerpoint
 import rich
+from neo_stif.infer import generate_felix
+import time
+
 
 console = rich.console.Console()
 
@@ -25,6 +29,65 @@ LR_TAGGER = 5e-5  # due to the pre-trained nature
 LR_POINTER = 1e-5  # no pre-trained
 LR_INSERTION = 2e-5  # due to the pre-trained nature
 VAL_CHECK_INTERVAL = 20
+
+prompt = """
+Given an informal or colloquial sentences of Bahasa Indonesia, translate the informal sentence to its standard or formal one. 
+Give the answer with this format:
+<<informal>> : <<formal>>
+For example
+
+{string_few_shot}
+
+Just give the answer directly! Do not ELABORATE and GIVE INFORMATION! I am poor.
+
+<<{instance}>> : 
+"""
+
+
+def open_ai_inference(
+    dev_csv_path="data/stif_indo/test_with_pointing.csv",
+    test_csv_path="data/stif_indo/test_with_pointing.csv",
+    output_path="data/pred/stif_chat_gpt.txt",
+    sleep_time=2,
+):
+    """
+    Perform felix inference task using the given parameters.
+    """
+    from openai import OpenAI
+
+    client = OpenAI()
+    dev_csv = pd.read_csv(dev_csv_path)
+    test_csv = pd.read_csv(test_csv_path)
+
+    def generate_example(informal, formal):
+        return f"<<{informal}>> : <<{formal}>>"
+
+    string_few_shot = ""
+    for i in range(3):
+        few_shot_1 = generate_example(dev_csv.iloc[i].informal, dev_csv.iloc[i].formal)
+        string_few_shot += few_shot_1 + "\n"
+    result = []
+
+    for i in tqdm(range(len(test_csv))):
+        prompt_ready = prompt.format(
+            string_few_shot=string_few_shot, instance=test_csv.iloc[i].informal
+        )
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": prompt_ready},
+            ],
+        )
+
+        # save it to a file append 'chat.txt'
+        with open(output_path, "a") as f:
+            f.write(str(i) + "\n")
+            f.write(completion.choices[0].message.content + "\n")
+            f.write("\n")
+            f.write("====\n")
+
+        result.append(completion.choices[0].message.content)
+        time.sleep(sleep_time)
 
 
 def generate_data_for_felix_insertion(
@@ -150,7 +213,7 @@ def train_stif(
     # Callback for trainer
 
     df_train = pd.read_csv(train_path)
-    data_train = datasets.Dataset.from_pandas(df_train) 
+    data_train = datasets.Dataset.from_pandas(df_train)
     data_train, label_dict = prepare_data_tagging_and_pointer(
         data_train, tokenizer, label_dict
     )
